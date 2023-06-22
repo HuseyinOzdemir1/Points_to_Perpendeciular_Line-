@@ -179,12 +179,8 @@ class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
                                             is_child_algorithm=True)
         
         
-
-        # Return the results of the algorithm. In this case our only result is
-        # the line feature which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
-        
+        """
+        These should all be included in the returned dictionary,
+        with keys matching the feature corresponding parameter or output names.
+        """
         return {'OUTPUT1': pointOutputLayer['OUTPUT'],'OUTPUT2': outputVectorLayer['OUTPUT']}
