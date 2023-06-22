@@ -2,7 +2,6 @@
 
 
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import QgsProject
 from qgis.core import (QgsProcessing,
                        QgsVectorLayer,
                        QgsFeatureSink,
@@ -10,16 +9,20 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterFeatureSink,
-                       QgsProcessingParameterNumber,
-                       QgsExpression,
-                       QgsExpressionContext)
+                       QgsProcessingParameterNumber
+                       )
 from qgis import processing
 
 
 class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
     """
-    This is algorithm that takes a point vector layer and
-    creates a perpendicular line for left and right side.
+    This is an example algorithm that takes a vector layer and
+    creates a new identical one.
+
+    It is meant to be used as an example of how to create your own
+    algorithms and explain methods and variables used to do it. An
+    algorithm like this will be available in all elements, and there
+    is not need for additional work.
 
     All Processing algorithms should extend the QgsProcessingAlgorithm
     class.
@@ -29,9 +32,12 @@ class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
 
-    INPUT = 'INPUT' # Input point layer
-    WIDTH = 'WIDTH' # Line width for both sides
-    OUTPUT = 'OUTPUT' # Temporary output layer
+    INPUT = 'INPUT' # Input line layer
+    POINTDISTANCE = 'POINTDISTANCE' # Point distance along geometry
+    WIDTH = 'WIDTH' # Line width
+    OUTPUT1 = 'OUTPUT1' # Point feature temporary output
+    OUTPUT2 = 'OUTPUT2' # Line feature temporary output
+    
 
     def tr(self, string):
         """
@@ -82,7 +88,7 @@ class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
         should provide a basic description about what the algorithm does and the
         parameters and outputs associated with it..
         """
-        return self.tr("This algortihm allows you to create perpendicular line for a specific point feature")
+        return self.tr("This algortihm allows you to create perpendicular line for a specific distance in line feature")
 
     def initAlgorithm(self, config=None):
         """
@@ -90,15 +96,22 @@ class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
         with some other properties.
         """
 
-        # We add the input vector features source. It can have point feature.
+        # We add the input vector features source. It can have line feature.
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr('Input layer'),
-                [QgsProcessing.TypeVectorPoint]
+                [QgsProcessing.TypeVectorLine]
             )
         )
-
+        
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.POINTDISTANCE,
+                self.tr('Point Distance Along Line')
+            )
+        )
+        
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.WIDTH,
@@ -108,11 +121,19 @@ class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
         
 
         # We add a feature sink in which to store our processed features (this
-        # usually takes the form of a newly created vector layer when the algorithm is run in QGIS).
+        # usually takes the form of a newly created vector layer when the
+        # algorithm is run in QGIS).
         self.addParameter(
             QgsProcessingParameterFeatureSink(
-                self.OUTPUT,
-                self.tr('Output layer')
+                self.OUTPUT1,
+                self.tr('Output point layer')
+            )
+        )
+        
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT2,
+                self.tr('Output line layer')
             )
         )
 
@@ -120,26 +141,44 @@ class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
         """
         Here is where the processing itself takes place.
         """
+        pointDistance = parameters['POINTDISTANCE']
+        
+        pointOutputLayer = self.parameterAsVectorLayer(parameters,self.OUTPUT1,context)
+        
+        pointOutputLayer = processing.run("native:pointsalonglines",
+                                            {
+                                            'DISTANCE':pointDistance,
+                                            'END_OFFSET': 0,
+                                            'START_OFFSET': 0,
+                                            'INPUT': parameters['INPUT'],
+                                            'OUTPUT': parameters['OUTPUT1']
+                                            },
+                                            context=context,
+                                            feedback=feedback,
+                                            is_child_algorithm=True
+                                            )
 
-        outputVectorLayer = self.parameterAsVectorLayer(parameters,self.OUTPUT,context)
-        wid = parameters['WIDTH']
         
-        geoExpression = 'extend(make_line($geometry,project ($geometry,'+ str(wid) + ',radians("angle" -90))),' + str(wid) + ',0)'
+        outputVectorLayer = self.parameterAsVectorLayer(parameters,self.OUTPUT2,context)
         
+        leftRigthWidth = parameters['WIDTH']
+        
+        geoExpression = 'extend(make_line($geometry,project ($geometry,'+ str(leftRigthWidth) + ',radians("angle" -90))),' + str(leftRigthWidth) + ',0)'
         
         outputVectorLayer = processing.run("native:geometrybyexpression",
                                             {
                                             'EXPRESSION':geoExpression,
-                                            'INPUT': parameters['INPUT'],
+                                            'INPUT': pointOutputLayer['OUTPUT'],
                                             'OUTPUT_GEOMETRY': 1,  # Line
                                             'WITH_M': False,
                                             'WITH_Z': False,
-                                            'OUTPUT': parameters['OUTPUT']
+                                            'OUTPUT': parameters['OUTPUT2']
                                             }
                                             ,context=context,
                                             feedback=feedback,
                                             is_child_algorithm=True)
-              
+        
+        
 
         # Return the results of the algorithm. In this case our only result is
         # the line feature which contains the processed features, but some
@@ -148,5 +187,4 @@ class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
         # dictionary, with keys matching the feature corresponding parameter
         # or output names.
         
-        return {'OUTPUT': outputVectorLayer['OUTPUT']}
-
+        return {'OUTPUT1': pointOutputLayer['OUTPUT'],'OUTPUT2': outputVectorLayer['OUTPUT']}
