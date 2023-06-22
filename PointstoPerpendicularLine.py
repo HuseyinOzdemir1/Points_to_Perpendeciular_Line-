@@ -90,7 +90,7 @@ class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
         with some other properties.
         """
 
-        # We add the input vector features source. It can have any kind of geometry.
+        # We add the input vector features source. It can have point feature.
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
