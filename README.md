@@ -1,4 +1,4 @@
-# Points_to_Perpendicular_Line_QGIS
+# Points to Perpendicular Line QGIS
 
 This algortihm allows you to create perpendicular line for a specific line feature.
 
