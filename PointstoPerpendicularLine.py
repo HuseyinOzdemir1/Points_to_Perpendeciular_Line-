@@ -16,14 +16,6 @@ from qgis import processing
 
 class PPLProcessingAlgorithm(QgsProcessingAlgorithm):
     """
-    This is an example algorithm that takes a vector layer and
-    creates a new identical one.
-
-    It is meant to be used as an example of how to create your own
-    algorithms and explain methods and variables used to do it. An
-    algorithm like this will be available in all elements, and there
-    is not need for additional work.
-
     All Processing algorithms should extend the QgsProcessingAlgorithm
     class.
     """
